@@ -114,6 +114,29 @@ buildtrace update-db
 - `offline` needs user namespaces, which containers usually block; run the
   container itself with `--network none` instead.
 
+## Related work
+
+Each piece exists somewhere; the combination for a single command did not.
+
+- **nsntrace** runs one command in a network namespace and writes a pcap for
+  Wireshark. buildtrace keeps the command in its own namespace, parses the
+  names itself and prints a table instead.
+- **bandwhich** and **OpenSnitch** attribute live traffic to processes;
+  **sniffnet** and **picosnitch** add ASN and country. All of them watch a
+  machine over time rather than scoping a build and producing a report.
+- **Harden-Runner** (StepSecurity) does the per-step egress report for GitHub
+  Actions, as a hosted service. buildtrace is the local, any-command version.
+- Build sandboxes enforce rather than report: build.opensuse.org workers run
+  in secure mode with no network (the OBS User Guide warns that source
+  services needing network "are likely to fail"), Fedora's mock disables
+  networking by default, Debian's sbuild needs `--enable-network`. buildtrace
+  tells you beforehand what such a build will miss, which is what the
+  `obs-service-cargo`, `node_modules` and `go_modules` vendoring services
+  then package.
+- SUSE's Cloud Sovereignty Framework self-assessment (January 2026) is a
+  32-question form in which supply chain carries 20% of the score. The form
+  asks; this measures.
+
 ## License
 
 MIT. The iptoasn.com data is public domain (CC0).
