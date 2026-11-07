@@ -216,7 +216,7 @@ func runOffline(ctx context.Context, cmd []string, jsonOut string, useStrace boo
 		return errors.New("offline mode needs unshare (util-linux)")
 	}
 	if out, err := exec.CommandContext(ctx, "unshare", "-rn", "true").CombinedOutput(); err != nil {
-		return fmt.Errorf("cannot create a network namespace here (%s); containers usually block this, so run the container itself with --network none and use \"buildtrace run\" inside it", strings.TrimSpace(string(out)))
+		return fmt.Errorf("cannot create a network namespace here (%s). Containers usually block this: run the container itself with --network none and use \"buildtrace run\" inside it. Ubuntu 24.04+ restricts unprivileged user namespaces through AppArmor: run as root there. openSUSE hosts allow it", strings.TrimSpace(string(out)))
 	}
 	inner := cmd
 	var straceFile string

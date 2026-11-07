@@ -111,8 +111,10 @@ buildtrace update-db
   hard-coded as an address, shows up as an address.
 - Under CPU emulation (an x86_64 container on an ARM Mac) strace cannot
   attach, so the process column stays empty. Use a native image.
-- `offline` needs user namespaces, which containers usually block; run the
-  container itself with `--network none` instead.
+- `offline` needs an unprivileged user namespace. Containers usually block
+  it (run the container itself with `--network none`), and Ubuntu 24.04+
+  restricts it through AppArmor (run as root there). Tumbleweed and Leap
+  allow it.
 
 ## Related work
 
