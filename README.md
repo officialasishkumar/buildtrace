@@ -29,6 +29,8 @@ DNS resolver: 192.168.65.7
 7 host(s) were spoken to over plaintext HTTP
 ```
 
+![buildtrace tracing zypper in vim](docs/buildtrace-zypper.svg)
+
 That is a real run from a laptop in Asia: openSUSE's redirector in Germany
 answered six times with 4 KB, and the 14 MB of packages came from four
 university mirrors in China over plain HTTP. (RPM signatures keep the

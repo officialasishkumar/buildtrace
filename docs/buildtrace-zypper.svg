@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" id="terminal" baseProfile="full" viewBox="0 0 1327 455" width="1327" version="1.1">
+    <defs>
+        <termtosvg:template_settings xmlns:termtosvg="https://github.com/nbedos/termtosvg">
+            <termtosvg:screen_geometry columns="160" rows="22"/>
+            <termtosvg:animation type="css"/>
+        </termtosvg:template_settings>
+        <style type="text/css" id="generated-style"><![CDATA[#screen {
+                font-family: 'DejaVu Sans Mono', monospace;
+                font-style: normal;
+                font-size: 14px;
+            }
+
+        text {
+            dominant-baseline: text-before-edge;
+            white-space: pre;
+        }
+    
+            :root {
+                --animation-duration: 7006ms;
+            }
+
+            @keyframes roll {
+                0.000%{transform:translateY(0px)}
+0.086%{transform:translateY(-408px)}
+28.618%{transform:translateY(-816px)}
+57.180%{transform:translateY(-1224px)}
+85.727%{transform:translateY(-1632px)}
+100.000%{transform:translateY(-1632px)}
+            }
+
+            #screen_view {
+                animation-duration: 7006ms;
+                animation-iteration-count:infinite;
+                animation-name:roll;
+                animation-timing-function: steps(1,end);
+                animation-fill-mode: forwards;
+            }
+        ]]></style>
+        <style type="text/css" id="user-style">
+            /* The colors defined below are the default 16 colors used for rendering text of the terminal. Adjust
+               them as needed.
+               gjm8 color theme (source: https://terminal.sexy/) */
+            .foreground {fill: #f8f8f2}
+            .background {fill: #272822}
+            .color0 {fill: #272822}
+            .color1 {fill: #f92672}
+            .color2 {fill: #a6e22e}
+            .color3 {fill: #f4bf75}
+            .color4 {fill: #66d9ef}
+            .color5 {fill: #ae81ff}
+            .color6 {fill: #a1efe4}
+            .color7 {fill: #f8f8f2}
+            .color8 {fill: #75715e}
+            .color9 {fill: #fd971f}
+            .color10 {fill: #383830}
+            .color11 {fill: #49483e}
+            .color12 {fill: #a59f85}
+            .color13 {fill: #f5f4f1}
+            .color14 {fill: #cc6633}
+            .color15 {fill: #f9f8f5}
+        </style>
+    </defs>
+    <rect id="terminalui" class="background" width="100%" height="100%" ry="4.5826941"/>
+    <circle cx="24" cy="23" r="7" class="color1"/>
+    <circle cx="44" cy="23" r="7" class="color3"/>
+    <circle cx="64" cy="23" r="7" class="color2"/>
+    <svg id="screen" width="1280" height="374" x="23" y="50" viewBox="0 0 1280 374" preserveAspectRatio="xMidYMin slice"><rect class="background" height="100%" width="100%" x="0" y="0"/><defs><g id="g1"><text x="0" textLength="8" class="background"> </text></g><g id="g2"><text x="0" textLength="416" class="foreground">$ buildtrace run -- zypper -n in --no-recommends vim</text></g><g id="g3"><text x="0" textLength="632" class="foreground">  libgdbm6 libgdbm_compat4 libpixman-1-0 perl perl-base vim vim-data-common xxd</text></g><g id="g4"><text x="0" textLength="352" class="foreground">buildtrace: zypper -n in --no-recommends vim</text></g><g id="g5"><text x="0" textLength="408" class="foreground">exit 0 after 12.8s; 5 hosts, 13.6 MB down, 40 KB up</text></g><g id="g6"><text x="0" textLength="1056" class="foreground">host                          port          flows     down     up  network                                               cc  process</text></g><g id="g7"><text x="0" textLength="1048" class="foreground">mirrors.nju.edu.cn            80/tcp plain      3  11.4 MB  18 KB  China Education and Research Network Center (AS4538)  CN  zypper</text></g><g id="g8"><text x="0" textLength="1048" class="foreground">mirrors.bfsu.edu.cn           80/tcp plain      1   1.6 MB  12 KB  China Unicom Beijing Province Network (AS4808)        CN  zypper</text></g><g id="g9"><text x="0" textLength="1048" class="foreground">mirrors.tuna.tsinghua.edu.cn  80/tcp plain      2   529 KB   5 KB  China Education and Research Network Center (AS4538)  CN  zypper</text></g><g id="g10"><text x="0" textLength="1048" class="foreground">cdn.opensuse.org              80/tcp plain      2    83 KB   2 KB  Fastly (AS54113)                                      US  zypper</text></g><g id="g11"><text x="0" textLength="1048" class="foreground">resolver 192.168.65.7         53/udp           16     4 KB   1 KB  resolver                                                  zypper</text></g><g id="g12"><text x="0" textLength="1048" class="foreground">download.opensuse.org         80/tcp plain      5     3 KB   2 KB  SUSE SUSE Software Solutions Germany (AS29298)        DE  zypper</text></g><g id="g13"><text x="0" textLength="448" class="foreground">by country of network registration: CN 99%, US 1%, DE 0%</text></g><g id="g14"><text x="0" textLength="1240" class="foreground">by operator: China Education and Research Network Center 87%, China Unicom Beijing Province Network 12%, Fastly 1%, SUSE SUSE Software Solutions Germany 0%</text></g><g id="g15"><text x="0" textLength="208" class="foreground">DNS resolver: 192.168.65.7</text></g><g id="g16"><text x="0" textLength="352" class="foreground">5 host(s) were spoken to over plaintext HTTP</text></g></defs><g id="screen_view"><g><rect x="0" y="0" width="8" height="17" class="foreground"/><use xlink:href="#g1" y="0"/></g><g><use xlink:href="#g2" y="408"/><rect x="0" y="425" width="8" height="17" class="foreground"/><use xlink:href="#g1" y="425"/></g><g><use xlink:href="#g2" y="816"/><use xlink:href="#g3" y="833"/><rect x="0" y="850" width="8" height="17" class="foreground"/><use xlink:href="#g1" y="850"/></g><g><use xlink:href="#g2" y="1224"/><use xlink:href="#g3" y="1241"/><use xlink:href="#g4" y="1258"/><use xlink:href="#g5" y="1275"/><use xlink:href="#g6" y="1292"/><use xlink:href="#g7" y="1309"/><use xlink:href="#g8" y="1326"/><use xlink:href="#g9" y="1343"/><use xlink:href="#g10" y="1360"/><use xlink:href="#g11" y="1377"/><use xlink:href="#g12" y="1394"/><use xlink:href="#g13" y="1411"/><use xlink:href="#g14" y="1428"/><use xlink:href="#g15" y="1445"/><use xlink:href="#g16" y="1462"/><rect x="0" y="1479" width="8" height="17" class="foreground"/><use xlink:href="#g1" y="1479"/></g><g><use xlink:href="#g2" y="1632"/><use xlink:href="#g3" y="1649"/><use xlink:href="#g4" y="1666"/><use xlink:href="#g5" y="1683"/><use xlink:href="#g6" y="1700"/><use xlink:href="#g7" y="1717"/><use xlink:href="#g8" y="1734"/><use xlink:href="#g9" y="1751"/><use xlink:href="#g10" y="1768"/><use xlink:href="#g11" y="1785"/><use xlink:href="#g12" y="1802"/><use xlink:href="#g13" y="1819"/><use xlink:href="#g14" y="1836"/><use xlink:href="#g15" y="1853"/><use xlink:href="#g16" y="1870"/><rect x="0" y="1887" width="8" height="17" class="foreground"/><use xlink:href="#g1" y="1887"/></g></g></svg>
+</svg>
