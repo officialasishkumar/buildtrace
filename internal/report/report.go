@@ -72,6 +72,7 @@ type Report struct {
 	TotalIn     int64     `json:"bytes_in"`
 	TotalOut    int64     `json:"bytes_out"`
 	Unnamed     int       `json:"hosts_without_name"`
+	Inbound     int       `json:"inbound_connections"`
 	Plaintext   int       `json:"plaintext_http_hosts"`
 	DBUpdated   string    `json:"asn_db_updated,omitempty"`
 	Traced      bool      `json:"process_attribution"`
@@ -115,6 +116,12 @@ func Build(in Inputs) *Report {
 	groups := map[string]*agg{}
 	var order []string
 	for _, f := range in.Flows {
+		if f.Inbound {
+			// Health checks, scrapes and clients connecting in: not
+			// something the workload fetched.
+			r.Inbound++
+			continue
+		}
 		name, from := f.Server, f.ServerFrom
 		if name == "" {
 			if names := in.Names(f.Remote); len(names) > 0 {
@@ -161,7 +168,11 @@ func Build(in Inputs) *Report {
 				top, topBytes = a, b
 			}
 		}
-		if in.DB != nil {
+		if top.IsPrivate() || top.IsLoopback() || top.IsLinkLocalUnicast() || isCGNAT(top) {
+			// Inside a cluster these are pods, services and nodes: traffic
+			// that never left the private network.
+			h.Org, h.Country = "private network", "local"
+		} else if in.DB != nil {
 			if info, ok := in.DB.Lookup(top); ok {
 				h.ASN, h.ASName, h.Country, h.Org = info.ASN, info.Name, info.Country, info.Org()
 			}
@@ -199,6 +210,10 @@ func Build(in Inputs) *Report {
 	r.ByOrg = buckets(org)
 	return r
 }
+
+var cgnat = netip.MustParsePrefix("100.64.0.0/10")
+
+func isCGNAT(a netip.Addr) bool { return cgnat.Contains(a.Unmap()) }
 
 func orUnknown(s string) string {
 	if s == "" {
@@ -247,7 +262,11 @@ func Bytes(n int64) string {
 // Text writes the human-readable report.
 func (r *Report) Text(w io.Writer) {
 	fmt.Fprintf(w, "\nbuildtrace: %s\n", r.Command)
-	fmt.Fprintf(w, "exit %d after %.1fs; %d hosts, %s down, %s up\n", r.ExitCode, r.DurationSec, countNonDNS(r), Bytes(r.TotalIn), Bytes(r.TotalOut))
+	if r.isWatch() {
+		fmt.Fprintf(w, "recorded %.1fs; %d hosts, %s down, %s up\n", r.DurationSec, countNonDNS(r), Bytes(r.TotalIn), Bytes(r.TotalOut))
+	} else {
+		fmt.Fprintf(w, "exit %d after %.1fs; %d hosts, %s down, %s up\n", r.ExitCode, r.DurationSec, countNonDNS(r), Bytes(r.TotalIn), Bytes(r.TotalOut))
+	}
 	if len(r.Hosts) == 0 && r.Offline == nil {
 		fmt.Fprintln(w, "no network traffic observed")
 	}
@@ -348,10 +367,15 @@ func (r *Report) table(w io.Writer) {
 	if r.Unnamed > 0 {
 		fmt.Fprintf(w, "%d host(s) had no DNS name or SNI in the capture (hard-coded addresses, or resolved before the trace started)\n", r.Unnamed)
 	}
-	if !r.Traced {
+	if r.Inbound > 0 {
+		fmt.Fprintf(w, "%d inbound connection(s) not listed (health checks, scrapes, clients)\n", r.Inbound)
+	}
+	if !r.Traced && !r.isWatch() {
 		fmt.Fprintln(w, "process column empty: strace was not used")
 	}
 }
+
+func (r *Report) isWatch() bool { return strings.HasPrefix(r.Command, "watch ") }
 
 func countNonDNS(r *Report) int {
 	n := 0

@@ -15,6 +15,8 @@ import (
 	"net/netip"
 	"os"
 	"path/filepath"
+	"runtime/debug"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -46,14 +48,22 @@ func (i Info) Org() string {
 	return strings.TrimSpace(name)
 }
 
-type rng struct {
+// Ranges are stored compactly: IPv4 bounds as integers, and the AS details
+// interned in one table, because the database has ~700k rows but only ~80k
+// distinct networks. This keeps a loaded database near 20 MB, small enough
+// for a sidecar.
+type r4 struct{ lo, hi, info uint32 }
+
+type r6 struct {
 	lo, hi netip.Addr
-	info   Info
+	info   uint32
 }
 
 // DB is a loaded database.
 type DB struct {
-	v4, v6 []rng
+	v4    []r4
+	v6    []r6
+	infos []Info
 	// Updated is the modification time of the cached file.
 	Updated time.Time
 }
@@ -138,52 +148,83 @@ func Parse(r io.Reader) (*DB, error) {
 		defer gz.Close()
 		br = bufio.NewReaderSize(gz, 1<<20)
 	}
-	db := &DB{}
+	db := &DB{v4: make([]r4, 0, 1<<19), v6: make([]r6, 0, 1<<18)}
+	index := map[string]uint32{}
 	sc := bufio.NewScanner(br)
 	sc.Buffer(make([]byte, 1<<16), 1<<16)
+	var f [5][]byte
 	for sc.Scan() {
-		f := strings.Split(sc.Text(), "\t")
-		if len(f) < 5 {
+		line := sc.Bytes()
+		n := 0
+		for n < 4 {
+			i := bytes.IndexByte(line, '\t')
+			if i < 0 {
+				break
+			}
+			f[n], line = line[:i], line[i+1:]
+			n++
+		}
+		if n < 4 {
 			continue
 		}
-		lo, err1 := netip.ParseAddr(f[0])
-		hi, err2 := netip.ParseAddr(f[1])
-		if err1 != nil || err2 != nil {
+		f[4] = line
+		lo, err1 := netip.ParseAddr(string(f[0]))
+		hi, err2 := netip.ParseAddr(string(f[1]))
+		if err1 != nil || err2 != nil || lo.Is4() != hi.Is4() {
 			continue
 		}
-		n, _ := strconv.ParseUint(f[2], 10, 32)
-		country := f[3]
-		if country == "None" {
-			country = ""
+		key := f[2:5]
+		idx, ok := index[string(bytes.Join(key, []byte{'\t'}))]
+		if !ok {
+			asn, _ := strconv.ParseUint(string(f[2]), 10, 32)
+			country := string(f[3])
+			if country == "None" {
+				country = ""
+			}
+			idx = uint32(len(db.infos))
+			db.infos = append(db.infos, Info{ASN: uint32(asn), Country: country, Name: string(f[4])})
+			index[string(bytes.Join(key, []byte{'\t'}))] = idx
 		}
-		e := rng{lo: lo, hi: hi, info: Info{ASN: uint32(n), Country: country, Name: f[4]}}
 		if lo.Is4() {
-			db.v4 = append(db.v4, e)
+			db.v4 = append(db.v4, r4{lo: v4int(lo), hi: v4int(hi), info: idx})
 		} else {
-			db.v6 = append(db.v6, e)
+			db.v6 = append(db.v6, r6{lo: lo, hi: hi, info: idx})
 		}
 	}
 	if err := sc.Err(); err != nil {
 		return nil, err
 	}
-	sort.Slice(db.v4, func(i, j int) bool { return db.v4[i].lo.Less(db.v4[j].lo) })
+	sort.Slice(db.v4, func(i, j int) bool { return db.v4[i].lo < db.v4[j].lo })
 	sort.Slice(db.v6, func(i, j int) bool { return db.v6[i].lo.Less(db.v6[j].lo) })
+	db.v4 = slices.Clip(db.v4)
+	db.v6 = slices.Clip(db.v6)
+	// Parsing churns through ~100 MB of short-lived strings; hand it back.
+	debug.FreeOSMemory()
 	return db, nil
+}
+
+func v4int(a netip.Addr) uint32 {
+	b := a.As4()
+	return uint32(b[0])<<24 | uint32(b[1])<<16 | uint32(b[2])<<8 | uint32(b[3])
 }
 
 // Lookup finds the network of addr. ok is false when the address is not in
 // the database at all; a routed-but-unassigned range comes back with ASN 0.
 func (db *DB) Lookup(addr netip.Addr) (Info, bool) {
 	addr = addr.Unmap()
-	table := db.v6
 	if addr.Is4() {
-		table = db.v4
+		a := v4int(addr)
+		i := sort.Search(len(db.v4), func(i int) bool { return a < db.v4[i].lo }) - 1
+		if i < 0 || db.v4[i].hi < a {
+			return Info{}, false
+		}
+		return db.infos[db.v4[i].info], true
 	}
-	i := sort.Search(len(table), func(i int) bool { return addr.Less(table[i].lo) }) - 1
-	if i < 0 || table[i].hi.Less(addr) {
+	i := sort.Search(len(db.v6), func(i int) bool { return addr.Less(db.v6[i].lo) }) - 1
+	if i < 0 || db.v6[i].hi.Less(addr) {
 		return Info{}, false
 	}
-	return table[i].info, true
+	return db.infos[db.v6[i].info], true
 }
 
 // Len is the number of ranges loaded.

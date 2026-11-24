@@ -28,6 +28,7 @@ const usage = `buildtrace: who does your build talk to?
 Usage:
   buildtrace run [flags] -- <command>      run the command, report every host it contacted
   buildtrace offline [flags] -- <command>  run it with no network and report what it tried to reach
+  buildtrace watch [flags]                 record this network namespace until stopped (sidecar mode)
   buildtrace show report.json              print a saved report
   buildtrace update-db                     refresh the IP-to-network database (iptoasn.com)
   buildtrace version
@@ -41,6 +42,16 @@ Flags for run:
 buildtrace needs Linux and permission to open a packet socket: root, a
 container, or a user namespace (unshare -rn). On a Mac run it inside a
 Linux container.
+
+Flags for watch:
+  --for DUR        stop after this long (default: until SIGINT/SIGTERM)
+  --json FILE      write the JSON report here, refreshed every --every
+  --every DUR      how often to refresh the JSON report (default 10s)
+  --no-lookup      skip the network/country lookup
+
+In a Kubernetes pod every container shares one network namespace, so
+"buildtrace watch" as a native sidecar sees the whole pod's traffic from
+before the first init container runs. See deploy/ in the repository.
 
 Example:
   buildtrace run --json pip.json -- pip install --no-cache-dir requests
@@ -67,6 +78,8 @@ func run(args []string) error {
 		return cmdRun(ctx, args[1:], true)
 	case "show":
 		return cmdShow(args[1:])
+	case "watch":
+		return cmdWatch(ctx, args[1:])
 	case "update-db":
 		if err := asn.Download(ctx, asn.DefaultURL); err != nil {
 			return err
@@ -178,7 +191,7 @@ func cmdRun(ctx context.Context, args []string, offline bool) error {
 		}
 	}
 	rep := report.Build(report.Inputs{Command: strings.Join(cmd, " "), Started: started, Duration: dur, ExitCode: exit,
-		Hostname: capture.Hostname(), Packets: tr.Packets, Flows: tr.Flows(), Names: tr.Names, Resolver: tr.Resolvers(),
+		Hostname: capture.Hostname(), Packets: tr.PacketCount(), Flows: tr.Flows(), Names: tr.Names, Resolver: tr.Resolvers(),
 		DB: db, Trace: tl, Version: version})
 	rep.Text(os.Stdout)
 	if *jsonOut != "" {

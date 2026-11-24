@@ -91,11 +91,67 @@ unshare -rn sh -c 'pasta --config-net -- buildtrace run -- make'   # pasta from 
 
 On a Mac, run it inside a Linux container.
 
+## In Kubernetes: what does a pod fetch while it starts?
+
+Every container in a pod shares one network namespace. Run `buildtrace
+watch` as a [native sidecar](https://kubernetes.io/docs/concepts/workloads/pods/sidecar-containers/)
+(the first init container, with `restartPolicy: Always`, Kubernetes 1.29+)
+and it is capturing before any other init container starts, so it sees the
+whole boot: model weights, pip installs, licence checks, telemetry. The only
+thing it cannot see is the image pull itself, which the node's runtime does
+outside the pod (use [coldstart](https://github.com/officialasishkumar/coldstart)
+for that).
+
+```yaml
+initContainers:
+  - name: buildtrace
+    image: ghcr.io/officialasishkumar/buildtrace:latest
+    restartPolicy: Always
+    args: ["watch", "--json", "/tmp/buildtrace.json", "--every", "5s"]
+    securityContext:
+      runAsUser: 0
+      capabilities: { drop: ["ALL"], add: ["NET_RAW"] }
+    resources:
+      requests: { cpu: 50m, memory: 64Mi }
+      limits: { memory: 128Mi }
+  # ... your init containers and containers as before
+```
+
+Full example: [deploy/llm-pod-with-buildtrace.yaml](deploy/llm-pod-with-buildtrace.yaml),
+a llama.cpp server whose init container downloads a 0.5B-parameter model.
+On a kind cluster (Kubernetes 1.35, 24 Nov 2026):
+
+```
+$ kubectl exec llm-traced-gcj6x -c buildtrace -- /buildtrace show /tmp/buildtrace.json
+
+buildtrace: watch llm-traced-gcj6x
+recorded 50.0s; 2 hosts, 446.4 MB down, 428 KB up
+
+host                 port     flows      down      up  network               cc     process
+us.aws.cdn.hf.co     443/tcp      1  446.4 MB  425 KB  Amazon.com (AS16509)  US
+huggingface.co       443/tcp      1      8 KB    2 KB  Amazon.com (AS16509)  US
+resolver 10.96.0.10  53/udp       8      3 KB    1 KB  resolver              local
+
+by country of network registration: US 100%
+by operator: Amazon.com 100%
+DNS resolver: 10.96.0.10
+5 inbound connection(s) not listed (health checks, scrapes, clients)
+```
+
+Every byte of that model server's startup came from one US-registered
+network, on every restart. Connections opened *to* the pod (kubelet probes,
+Prometheus scrapes) are counted but not listed; in-cluster addresses are
+labelled `private network`, so an in-cluster mirror shows up as exactly that.
+
+The image is `FROM scratch` with the IP-to-network database baked in, so the
+sidecar makes no connections of its own; it runs in under 64 MiB.
+
 ## Commands
 
 ```
 buildtrace run [--json out.json] [--no-strace] [--no-lookup] -- <command>
 buildtrace offline [--json out.json] -- <command>
+buildtrace watch [--for DUR] [--json out.json] [--every DUR]
 buildtrace show out.json
 buildtrace update-db
 ```

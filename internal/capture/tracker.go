@@ -21,6 +21,7 @@ type Flow struct {
 	First      time.Duration // since tracking started
 	Server     string        // from TLS SNI or an HTTP Host header
 	ServerFrom string        // "sni" or "http"
+	Inbound    bool          // opened by the remote side (a SYN arrived first)
 	head       []byte
 	headDone   bool
 }
@@ -77,7 +78,8 @@ func (t *Tracker) Handle(p Packet, count bool) {
 	k := flowKey{p.Proto, remote.Unmap(), rport, lport}
 	f := t.flows[k]
 	if f == nil {
-		f = &Flow{Proto: p.Proto, Remote: remote.Unmap(), RemotePort: rport, LocalPort: lport, First: time.Since(t.start)}
+		f = &Flow{Proto: p.Proto, Remote: remote.Unmap(), RemotePort: rport, LocalPort: lport, First: time.Since(t.start),
+			Inbound: p.Proto == "tcp" && p.SYN && !p.Outgoing}
 		t.flows[k] = f
 	}
 	f.Packets++
@@ -117,6 +119,13 @@ func (t *Tracker) Flows() []Flow {
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].First < out[j].First })
 	return out
+}
+
+// PacketCount is the number of packets seen so far.
+func (t *Tracker) PacketCount() int {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return t.Packets
 }
 
 // Names returns the DNS names that resolved to addr during the capture.
