@@ -91,6 +91,47 @@ unshare -rn sh -c 'pasta --config-net -- buildtrace run -- make'   # pasta from 
 
 On a Mac, run it inside a Linux container.
 
+## Census: what do 525 popular package installs download, and from whom?
+
+We installed the 300 most-downloaded npm packages, the 200 most-downloaded PyPI
+packages, and 25 well-known npm packages with native or binary parts, each one
+alone in a fresh container with an empty cache, under `buildtrace run`
+(26 Nov 2026, from India; scripts in [census/](census/), every JSON report in `census/reports-2026-11.tar.gz`,
+summary in [census/RESULTS.md](census/RESULTS.md)).
+
+- **The top 300 npm packages:** 300 of 300 installs fetched only from
+  `registry.npmjs.org`, 100% of bytes from Cloudflare (US).
+- **The top 200 PyPI packages:** every package byte came from
+  `pypi.org`/`files.pythonhosted.org`, 100% Fastly (US). (One install also made
+  a single 368-byte connection to a Cloudflare address we could not attribute.)
+- **Only 6 of npm's top 2,000 packages still have an install script**
+  (esbuild, pnpm, core-js, @swc/core, fsevents, @parcel/watcher); none of them
+  downloaded anything outside the registry. Most native packages now ship
+  prebuilt binaries as platform-specific optional dependencies, which come
+  from the registry like any other package.
+- **The exceptions are large.** Of the 25 packages with binary parts, **9
+  fetched from outside the registry while installing**, about 600 MB in total:
+
+| package | fetched during install from | size |
+|---|---|---:|
+| puppeteer | storage.googleapis.com (Chrome for Testing) | 321 MB |
+| cypress | cdn.cypress.io | 210 MB |
+| canvas | GitHub release assets | 19.5 MB |
+| chromedriver | storage.googleapis.com | 15.3 MB |
+| ngrok | bin.equinox.io (Amazon) | 10.3 MB |
+| node-sass, node-pty | nodejs.org (Node headers for node-gyp) | 9.6 MB each |
+| sqlite3, re2 | GitHub release assets | 1.1 MB, 0.5 MB |
+
+None of those bytes are covered by the integrity hashes in
+`package-lock.json`, which cover only registry tarballs; none used plaintext
+HTTP. With the network removed (`buildtrace offline -- npm rebuild`), **8 of
+the 9 install scripts fail**, and the ninth, puppeteer, prints "Browser
+download failed" and **exits 0 without a browser**, so an offline or
+air-gapped build passes and breaks later at run time.
+
+To repeat it: `census/run.py` and `census/summarize.py` (Docker, about an hour
+on a laptop).
+
 ## In Kubernetes: what does a pod fetch while it starts?
 
 Every container in a pod shares one network namespace. Run `buildtrace

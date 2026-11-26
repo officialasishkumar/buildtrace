@@ -1,0 +1,6 @@
+esbuild
+pnpm
+core-js
+@swc/core
+fsevents
+@parcel/watcher
